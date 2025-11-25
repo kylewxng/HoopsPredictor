@@ -1,70 +1,53 @@
 import streamlit as st
 import pandas as pd
-import pickle
 import numpy as np
+import pickle
 
-# Load Models
+# Load trained models & metadata
 model_pts = pickle.load(open("model_pts.pkl", "rb"))
 model_reb = pickle.load(open("model_reb.pkl", "rb"))
 model_ast = pickle.load(open("model_ast.pkl", "rb"))
 
-# Load Metadata (used to populate dropdowns and structure features)
-player_meta = pd.read_csv("player_metadata.csv")
+player_metadata = pd.read_csv("player_metadata.csv")
 
-# Unique dropdown values
-players = sorted(player_meta.index.astype(str).tolist())
-teams = sorted(player_meta['Tm'].unique().tolist())
-opponents = sorted(player_meta['Opp'].unique().tolist())
+# Sidebar user selections
+st.sidebar.title("HoopsPredictor")
+players = sorted(player_metadata["Player"].unique())
 
-st.title("🏀 HoopsPredictor")
-st.write("Predict NBA Player Props: **Points**, **Rebounds**, and **Assists**")
-
-# Sidebar Inputs
-st.sidebar.header("Game Inputs")
-
-# Select Player
-player = st.sidebar.selectbox("Select Player ID (Index)", players)
-player_idx = int(player)
-
-# Game Inputs
-mp = st.sidebar.slider("Minutes Played", 10, 45, 32)
-fg = st.sidebar.slider("FG Made", 0, 20, 8)
-fga = st.sidebar.slider("FG Attempts", 0, 30, 16)
-p3 = st.sidebar.slider("3PM", 0, 12, 3)
-p3a = st.sidebar.slider("3PA", 0, 15, 8)
-ft = st.sidebar.slider("FT Made", 0, 20, 5)
-fta = st.sidebar.slider("FTA", 0, 20, 6)
-home = st.sidebar.radio("Home or Away", ("Home", "Away"))
+player_name = st.sidebar.selectbox("Select Player", players)
+home = st.sidebar.radio("Game Location", ("Home", "Away"))
 home = 1 if home == "Home" else 0
 
-opp = st.sidebar.selectbox("Opponent (numeric ID)", opponents)
-opp = int(opp)
+opponents = sorted(player_metadata["Opp_name"].unique())
+opp_name = st.sidebar.selectbox("Opponent", opponents)
 
-# Build input row matching model features
-columns = player_meta.columns  # ensures correct order
-input_data = np.zeros((1, len(columns)))
+st.title("HoopsPredictor: NBA Prop Projection")
 
-input_data[0, :] = [
-    (mp if col == "MP" else
-     fg if col == "FG" else
-     fga if col == "FGA" else
-     p3 if col == "3P" else
-     p3a if col == "3PA" else
-     ft if col == "FT" else
-     fta if col == "FTA" else
-     home if col == "Home" else
-     opp if col == "Opp" else
-     player_meta.iloc[player_idx][col])
-    for col in columns
-]
-
-# Prediction Button
+# Prepare model input automatically
 if st.sidebar.button("Predict"):
-    pred_points = model_pts.predict(input_data)[0]
-    pred_rebounds = model_reb.predict(input_data)[0]
-    pred_assists = model_ast.predict(input_data)[0]
 
-    st.subheader("📊 Predictions")
-    st.write(f"**Projected Points:** {pred_points:.1f}")
-    st.write(f"**Projected Rebounds:** {pred_rebounds:.1f}")
-    st.write(f"**Projected Assists:** {pred_assists:.1f}")
+    # Most recent row for player
+    p_data = player_metadata[player_metadata["Player"] == player_name].iloc[-1].copy()
+
+    # Set home/away and opponent numeric id
+    p_data["Home"] = home
+    p_data["Opp"] = player_metadata[player_metadata["Opp_name"] == opp_name]["Opp"].iloc[0]
+
+    # Build model input vector — drop non-feature columns
+    model_input = p_data.drop(["Player", "Tm_name", "Opp_name"]).values.reshape(1, -1)
+
+    # ML model predictions
+    pred_pts = model_pts.predict(model_input)[0]
+    pred_reb = model_reb.predict(model_input)[0]
+    pred_ast = model_ast.predict(model_input)[0]
+
+    # Show results
+    st.subheader(f"Prediction for {player_name}")
+    st.write(f"**Points:** {pred_pts:.1f}")
+    st.write(f"**Rebounds:** {pred_reb:.1f}")
+    st.write(f"**Assists:** {pred_ast:.1f}")
+
+    st.success("Prediction complete!")
+
+st.write("---")
+st.caption("👨‍💻 Powered by Machine Learning | Built by Brandon")
