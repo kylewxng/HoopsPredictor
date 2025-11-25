@@ -62,3 +62,12 @@ Performance represents improvement of approximately 20–35% over season-average
 
 ## Repository Structure
 
+```text
+HoopsPredictor/
+ ├── models/              # Serialized XGBoost models
+ ├── notebooks/           # Training and analysis notebooks
+ ├── data/                # Data references / preprocessing outputs
+ ├── streamlit_app.py     # App inference + UI
+ ├── requirements.txt     # Dependencies
+ └── README.md            # Documentation
+
