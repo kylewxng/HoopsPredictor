@@ -50,4 +50,3 @@ if st.sidebar.button("Predict"):
     st.success("Prediction complete!")
 
 st.write("---")
-st.caption("👨‍💻 Powered by Machine Learning | Built by Brandon")
