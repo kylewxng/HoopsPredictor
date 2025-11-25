@@ -7,6 +7,7 @@ import pickle
 model_pts = pickle.load(open("model_pts.pkl", "rb"))
 model_reb = pickle.load(open("model_reb.pkl", "rb"))
 model_ast = pickle.load(open("model_ast.pkl", "rb"))
+feature_columns = pickle.load(open("feature_columns.pkl", "rb"))
 
 player_metadata = pd.read_csv("player_metadata.csv")
 
@@ -33,8 +34,17 @@ if st.sidebar.button("Predict"):
     p_data["Home"] = home
     p_data["Opp"] = player_metadata[player_metadata["Opp_name"] == opp_name]["Opp"].iloc[0]
 
-    # Build model input vector — drop non-feature columns
-    model_input = p_data.drop(["Player", "Tm_name", "Opp_name"]).values.reshape(1, -1)
+
+    # Keep only features used during training and in correct order
+    input_df = pd.DataFrame([p_data])
+    input_df["Home"] = home
+    input_df["Opp"] = player_metadata[player_metadata["Opp_name"] == opp_name]["Opp"].iloc[0]
+
+    # Drop columns not used
+    input_df = input_df[feature_columns]
+
+    model_input = input_df.values
+
 
     # ML model predictions
     pred_pts = model_pts.predict(model_input)[0]
